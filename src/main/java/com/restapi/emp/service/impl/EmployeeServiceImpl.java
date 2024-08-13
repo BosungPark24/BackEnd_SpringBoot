@@ -8,30 +8,28 @@ import com.restapi.emp.exception.ResourceNotFoundException;
 import com.restapi.emp.repository.DepartmentRepository;
 import com.restapi.emp.repository.EmployeeRepository;
 import com.restapi.emp.service.EmployeeService;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@AllArgsConstructor
+@Transactional
+@RequiredArgsConstructor
 public class EmployeeServiceImpl implements EmployeeService {
 
-    private EmployeeRepository employeeRepository;
-
-    private DepartmentRepository departmentRepository;
+    private final EmployeeRepository employeeRepository;
+    private final DepartmentRepository departmentRepository;
 
     @Override
     public EmployeeDto createEmployee(EmployeeDto employeeDto) {
 
         Employee employee = EmployeeMapper.mapToEmployee(employeeDto);
 
-        Department department = departmentRepository.findById(employeeDto.getDepartmentId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Department is not exists with id: " +
-                                employeeDto.getDepartmentId(),
-                                HttpStatus.NOT_FOUND));
+        Department department = EmpDeptCommon.getDepartment(employeeDto.getDepartmentId(), departmentRepository);
 
         employee.setDepartment(department);
 
@@ -41,11 +39,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public EmployeeDto getEmployeeById(Long employeeId) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Employee is not exists with given id : " + employeeId,
-                                HttpStatus.NOT_FOUND));
+        Employee employee = EmpDeptCommon.getEmployee(employeeId, employeeRepository);
 
         return EmployeeMapper.mapToEmployeeDto(employee);
     }
@@ -69,40 +63,41 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public EmployeeDto updateEmployee(Long employeeId, EmployeeDto updatedEmployee) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Employee is not exists with given id: " + employeeId,
-                                HttpStatus.NOT_FOUND)
-        );
+        Employee employee = EmpDeptCommon.getEmployee(employeeId, employeeRepository);
 
-        employee.setFirstName(updatedEmployee.getFirstName());
-        employee.setLastName(updatedEmployee.getLastName());
-        employee.setEmail(updatedEmployee.getEmail());
+        if(updatedEmployee.getFirstName() != null)
+            employee.setFirstName(updatedEmployee.getFirstName());
+        if(updatedEmployee.getLastName() != null)
+            employee.setLastName(updatedEmployee.getLastName());
+        if(updatedEmployee.getEmail() != null)
+            employee.setEmail(updatedEmployee.getEmail());
 
-        Department department = departmentRepository.findById(updatedEmployee.getDepartmentId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Department is not exists with id: " + updatedEmployee.getDepartmentId(),
-                                HttpStatus.NOT_FOUND
-                                ));
+        Department department =
+                EmpDeptCommon.getDepartment(updatedEmployee.getDepartmentId(), departmentRepository);
+//                departmentRepository.findById(updatedEmployee.getDepartmentId())
+//                .orElseThrow(() ->
+//                        new ResourceNotFoundException(
+//                                "Department is not exists with id: " + updatedEmployee.getDepartmentId(),
+//                                HttpStatus.NOT_FOUND
+//                                ));
 
         employee.setDepartment(department);
 
-        Employee updatedEmployeeObj = employeeRepository.save(employee);
+        //Employee updatedEmployeeObj = employeeRepository.save(employee);
 
-        return EmployeeMapper.mapToEmployeeDto(updatedEmployeeObj);
+        return EmployeeMapper.mapToEmployeeDto(employee);
     }
 
     @Override
     public void deleteEmployee(Long employeeId) {
 
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Employee is not exists with given id: " + employeeId,
-                        HttpStatus.NOT_FOUND)
-        );
+        Employee employee = EmpDeptCommon.getEmployee(employeeId, employeeRepository);
+//                employeeRepository.findById(employeeId)
+//                .orElseThrow(() -> new ResourceNotFoundException(
+//                        "Employee is not exists with given id: " + employeeId,
+//                        HttpStatus.NOT_FOUND)
+//        );
 
-        employeeRepository.deleteById(employeeId);
+        employeeRepository.delete(employee);
     }
 }
